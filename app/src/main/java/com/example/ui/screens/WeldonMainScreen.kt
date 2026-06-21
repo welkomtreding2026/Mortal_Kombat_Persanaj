@@ -38,6 +38,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.*
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.WeldonViewModel
+import com.example.ui.viewmodel.WeldonViewModel.CartItem
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -109,7 +110,8 @@ fun WeldonMainScreen(
                     activeShift = activeShift,
                     lowStockCount = lowStockProducts.size,
                     onOpenShift = { showShiftOpenDialog = true },
-                    onCloseShift = { showShiftCloseDialog = true }
+                    onCloseShift = { showShiftCloseDialog = true },
+                    isWide = isWide
                 )
                 
                 // Active Screen routing depending on SelectedTab
@@ -126,7 +128,8 @@ fun WeldonMainScreen(
                             customers = customers,
                             activeShift = activeShift,
                             orders = orders,
-                            onOpenShiftRequest = { showShiftOpenDialog = true }
+                            onOpenShiftRequest = { showShiftOpenDialog = true },
+                            isWide = isWide
                         )
                         1 -> InventoryWorkspace(
                             products = products,
@@ -137,7 +140,8 @@ fun WeldonMainScreen(
                             onAddCategoryClick = { showAddCategoryDialog = true },
                             onTransferClick = { showMovementDialog = true },
                             onEditProduct = { viewModel.editProduct(it) },
-                            onDeleteProduct = { viewModel.deleteProduct(it) }
+                            onDeleteProduct = { viewModel.deleteProduct(it) },
+                            isWide = isWide
                         )
                         2 -> CrmWorkspace(
                             customers = customers,
@@ -545,87 +549,176 @@ fun WeldonAppHeader(
     activeShift: Shift?,
     lowStockCount: Int,
     onOpenShift: () -> Unit,
-    onCloseShift: () -> Unit
+    onCloseShift: () -> Unit,
+    isWide: Boolean = false
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 4.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "WELDON RETAIL",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 20.sp,
-                    color = PremiumTeal,
-                    letterSpacing = 1.5.sp
-                )
-                Text(
-                    text = "POS & ERP avtomatlashtirish tizimi",
-                    fontSize = 11.sp,
-                    color = MutedSlate
-                )
-            }
-            
-            // Low Stock badge warning
-            if (lowStockCount > 0) {
+        if (isWide) {
+            Row(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "WELDON RETAIL",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp,
+                        color = PremiumTeal,
+                        letterSpacing = 1.5.sp
+                    )
+                    Text(
+                        text = "POS & ERP avtomatlashtirish tizimi",
+                        fontSize = 11.sp,
+                        color = MutedSlate
+                    )
+                }
+                
+                // Low Stock badge warning
+                if (lowStockCount > 0) {
+                    Surface(
+                        color = CrimsonError.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.padding(end = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = "Alert",
+                                tint = CrimsonError,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "$lowStockCount ta tovar qoldig'i kam",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CrimsonError
+                            )
+                        }
+                    }
+                }
+
+                // Active shift session status pill
                 Surface(
-                    color = CrimsonError.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.padding(end = 12.dp)
+                    color = if (activeShift != null) EmeraldCashGreen.copy(alpha = 0.15f) else CrimsonError.copy(alpha = 0.15f),
+                    shape = CircleShape,
+                    modifier = Modifier.clickable { 
+                        if (activeShift != null) onCloseShift() else onOpenShift()
+                    }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Alert",
-                            tint = CrimsonError,
-                            modifier = Modifier.size(14.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (activeShift != null) EmeraldCashGreen else CrimsonError)
                         )
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "$lowStockCount ta tovar qoldig'i kam",
-                            fontSize = 11.sp,
+                            text = if (activeShift != null) "Smena: ${activeShift.cashierName}" else "Kassa yopiq",
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CrimsonError
+                            color = if (activeShift != null) EmeraldCashGreen else CrimsonError
                         )
                     }
                 }
             }
-
-            // Active shift session status pill
-            Surface(
-                color = if (activeShift != null) EmeraldCashGreen.copy(alpha = 0.15f) else CrimsonError.copy(alpha = 0.15f),
-                shape = CircleShape,
-                modifier = Modifier.clickable { 
-                    if (activeShift != null) onCloseShift() else onOpenShift()
-                }
+        } else {
+            // Mobile optimized Header - stacked neatly to prevent squeezed/vertical text!
+            Column(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(if (activeShift != null) EmeraldCashGreen else CrimsonError)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = if (activeShift != null) "Smena ochiq: ${activeShift.cashierName}" else "Kassa yopiq",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (activeShift != null) EmeraldCashGreen else CrimsonError
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "WELDON RETAIL",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp,
+                            color = PremiumTeal,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "POS & ERP tizimi",
+                            fontSize = 10.sp,
+                            color = MutedSlate
+                        )
+                    }
+                    
+                    // Active shift session status pill
+                    Surface(
+                        color = if (activeShift != null) EmeraldCashGreen.copy(alpha = 0.15f) else CrimsonError.copy(alpha = 0.12f),
+                        shape = CircleShape,
+                        modifier = Modifier.clickable { 
+                            if (activeShift != null) onCloseShift() else onOpenShift()
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (activeShift != null) EmeraldCashGreen else CrimsonError)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = if (activeShift != null) "Smena: ${activeShift.cashierName}" else "Kassa yopiq",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (activeShift != null) EmeraldCashGreen else CrimsonError
+                            )
+                        }
+                    }
+                }
+                
+                // Low Stock badge warning on a separate line or cleanly laid out to never squeeze!
+                if (lowStockCount > 0) {
+                    Surface(
+                        color = CrimsonError.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = "Alert",
+                                tint = CrimsonError,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Kam qolgan: $lowStockCount ta mahsulot bor",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CrimsonError
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -753,6 +846,7 @@ fun BadgedIcon(
 // --- WORKSPACE IMPLEMENTATIONS ---
 
 // Workspace 1: Kassa (The POS Quick checkout and voice/keyboard simulator)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KassaWorkspace(
     viewModel: WeldonViewModel,
@@ -761,11 +855,13 @@ fun KassaWorkspace(
     customers: List<Customer>,
     activeShift: Shift?,
     orders: List<SaleOrder>,
-    onOpenShiftRequest: () -> Unit
+    onOpenShiftRequest: () -> Unit,
+    isWide: Boolean = false
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedCatName by remember { mutableStateOf("Barchasi") }
+    var showMobileCartSheet by remember { mutableStateOf(false) }
     
     val cart by viewModel.cart.collectAsState()
     val selectedCustomer by viewModel.selectedCustomer.collectAsState()
@@ -962,317 +1058,408 @@ fun KassaWorkspace(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            // Left list: Products grid
-            Column(
-                modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight()
-                    .padding(8.dp)
-            ) {
-                // Search bar and categorizer
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { 
-                        searchQuery = it 
-                        viewModel.setProductSearch(it)
-                    },
-                    placeholder = { Text("Tovar nomi yoki shtrix-kodi...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("pos_search_input")
-                )
-                
-                Spacer(Modifier.height(8.dp))
-                
-                // Categories selection tabs
-                ScrollableTabRow(
-                    selectedTabIndex = if (selectedCatName == "Barchasi") 0 else 1,
-                    edgePadding = 0.dp,
-                    indicator = {},
-                    divider = {},
-                    containerColor = Color.Transparent
+            if (isWide) {
+                // Left list: Products grid side-by-side with cart (for wide screens)
+                Column(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .fillMaxHeight()
+                        .padding(8.dp)
                 ) {
-                    val listCats = listOf("Barchasi") + categories.map { it.name }
-                    listCats.forEach { catName ->
-                        val isSel = selectedCatName == catName
-                        Tab(
-                            selected = isSel,
-                            onClick = { selectedCatName = catName },
-                            text = {
-                                Surface(
-                                    color = if (isSel) PremiumTeal else SlateDarkSecondary,
-                                    shape = RoundedCornerShape(16.dp),
-                                    modifier = Modifier.padding(horizontal = 2.dp)
-                                ) {
-                                    Text(
-                                        text = catName,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSel) SlateDarkMain else Color.White
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                // Products list
-                val filteredList = products.filter {
-                    selectedCatName == "Barchasi" || it.category == selectedCatName
-                }
-
-                if (filteredList.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
+                    // Search bar and categorizer
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { 
+                            searchQuery = it 
+                            viewModel.setProductSearch(it)
+                        },
+                        placeholder = { Text("Tovar nomi yoki shtrix-kodi...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("pos_search_input")
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    // Categories selection tabs
+                    ScrollableTabRow(
+                        selectedTabIndex = if (selectedCatName == "Barchasi") 0 else 1,
+                        edgePadding = 0.dp,
+                        indicator = {},
+                        divider = {},
+                        containerColor = Color.Transparent
                     ) {
-                        Text("Mos keladigan mahsulotlar topilmadi.", color = MutedSlate)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredList) { prod ->
-                            Surface(
-                                color = SlateDarkSecondary,
-                                shape = RoundedCornerShape(10.dp),
-                                border = if (prod.stock <= prod.minStock) BorderStroke(1.dp, WarningOrange.copy(alpha = 0.5f)) else null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (prod.stock > 0) {
-                                            viewModel.addToCart(prod, 1.0)
-                                        } else {
-                                            Toast
-                                                .makeText(context, "Sotish uchun omborda tovar qolmagan!", Toast.LENGTH_SHORT)
-                                                .show()
-                                        }
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = prod.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = formatUzMoney(prod.price),
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = PremiumTeal,
-                                                fontSize = 13.sp
-                                            )
-                                            Text(
-                                                text = "• ${prod.category}",
-                                                fontSize = 11.sp,
-                                                color = MutedSlate
-                                            )
-                                        }
-                                    }
-                                    
-                                    // Stock qoldiq label
-                                    val stockColor = when {
-                                        prod.stock <= 0.0 -> CrimsonError
-                                        prod.stock <= prod.minStock -> WarningOrange
-                                        else -> EmeraldCashGreen
-                                    }
+                        val listCats = listOf("Barchasi") + categories.map { it.name }
+                        listCats.forEach { catName ->
+                            val isSel = selectedCatName == catName
+                            Tab(
+                                selected = isSel,
+                                onClick = { selectedCatName = catName },
+                                text = {
                                     Surface(
-                                        color = stockColor.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(6.dp)
+                                        color = if (isSel) PremiumTeal else SlateDarkSecondary,
+                                        shape = RoundedCornerShape(16.dp),
+                                        modifier = Modifier.padding(horizontal = 2.dp)
                                     ) {
                                         Text(
-                                            text = "Qoldiq: ${prod.stock.toInt()} ta",
-                                            fontSize = 11.sp,
+                                            text = catName,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = stockColor,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                            color = if (isSel) SlateDarkMain else Color.White
                                         )
                                     }
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Products list
+                    val filteredList = products.filter {
+                        selectedCatName == "Barchasi" || it.category == selectedCatName
+                    }
+
+                    if (filteredList.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Mos keladigan mahsulotlar topilmadi.", color = MutedSlate)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredList) { prod ->
+                                Surface(
+                                    color = SlateDarkSecondary,
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = if (prod.stock <= prod.minStock) BorderStroke(1.dp, WarningOrange.copy(alpha = 0.5f)) else null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (prod.stock > 0) {
+                                                viewModel.addToCart(prod, 1.0)
+                                            } else {
+                                                Toast
+                                                    .makeText(context, "Sotish uchun omborda tovar qolmagan!", Toast.LENGTH_SHORT)
+                                                    .show()
+                                            }
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = prod.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = formatUzMoney(prod.price),
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = PremiumTeal,
+                                                    fontSize = 13.sp
+                                                )
+                                                Text(
+                                                    text = "• ${prod.category}",
+                                                    fontSize = 11.sp,
+                                                    color = MutedSlate
+                                                )
+                                            }
+                                        }
+                                        
+                                        // Stock qoldiq label
+                                        val stockColor = when {
+                                            prod.stock <= 0.0 -> CrimsonError
+                                            prod.stock <= prod.minStock -> WarningOrange
+                                            else -> EmeraldCashGreen
+                                        }
+                                        Surface(
+                                            color = stockColor.copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "Qoldiq: ${prod.stock.toInt()} ta",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = stockColor,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Right list: ACTIVE CART & CHECKOUT panel
+                Surface(
+                    color = SlateDarkSecondary,
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .fillMaxHeight()
+                        .border(BorderStroke(1.dp, SlateDarkTertiary))
+                ) {
+                    WeldonCartAndCheckoutPanel(
+                        viewModel = viewModel,
+                        cart = cart,
+                        customers = customers,
+                        selectedCustomer = selectedCustomer,
+                        cashbackToUse = cashbackToUse,
+                        paymentType = paymentType,
+                        paidAmountInput = paidAmountInput,
+                        cashierName = activeShift.cashierName
+                    )
+                }
+            } else {
+                // Mobile layout: Products grid full width (Zero compression / Zero text warping!)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                            .padding(bottom = if (cart.isNotEmpty()) 64.dp else 0.dp)
+                    ) {
+                        // Search bar and categorizer
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { 
+                                searchQuery = it 
+                                viewModel.setProductSearch(it)
+                            },
+                            placeholder = { Text("Tovar nomi yoki shtrix-kodi...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().testTag("pos_search_input")
+                        )
+                        
+                        Spacer(Modifier.height(8.dp))
+                        
+                        // Categories selection tabs
+                        ScrollableTabRow(
+                            selectedTabIndex = if (selectedCatName == "Barchasi") 0 else 1,
+                            edgePadding = 0.dp,
+                            indicator = {},
+                            divider = {},
+                            containerColor = Color.Transparent
+                        ) {
+                            val listCats = listOf("Barchasi") + categories.map { it.name }
+                            listCats.forEach { catName ->
+                                val isSel = selectedCatName == catName
+                                Tab(
+                                    selected = isSel,
+                                    onClick = { selectedCatName = catName },
+                                    text = {
+                                        Surface(
+                                            color = if (isSel) PremiumTeal else SlateDarkSecondary,
+                                            shape = RoundedCornerShape(16.dp),
+                                            modifier = Modifier.padding(horizontal = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = catName,
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSel) SlateDarkMain else Color.White
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Products list
+                        val filteredList = products.filter {
+                            selectedCatName == "Barchasi" || it.category == selectedCatName
+                        }
+
+                        if (filteredList.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Mos keladigan mahsulotlar topilmadi.", color = MutedSlate)
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(filteredList) { prod ->
+                                    Surface(
+                                        color = SlateDarkSecondary,
+                                        shape = RoundedCornerShape(10.dp),
+                                        border = if (prod.stock <= prod.minStock) BorderStroke(1.dp, WarningOrange.copy(alpha = 0.5f)) else null,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                if (prod.stock > 0) {
+                                                    viewModel.addToCart(prod, 1.0)
+                                                } else {
+                                                    Toast
+                                                        .makeText(context, "Sotish uchun omborda tovar qolmagan!", Toast.LENGTH_SHORT)
+                                                        .show()
+                                                }
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = prod.name,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 15.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = formatUzMoney(prod.price),
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = PremiumTeal,
+                                                        fontSize = 13.sp
+                                                    )
+                                                    Text(
+                                                        text = "• ${prod.category}",
+                                                        fontSize = 11.sp,
+                                                        color = MutedSlate
+                                                    )
+                                                }
+                                            }
+                                            
+                                            // Stock qoldiq label
+                                            val stockColor = when {
+                                                prod.stock <= 0.0 -> CrimsonError
+                                                prod.stock <= prod.minStock -> WarningOrange
+                                                else -> EmeraldCashGreen
+                                            }
+                                            Surface(
+                                                color = stockColor.copy(alpha = 0.15f),
+                                                shape = RoundedCornerShape(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Qoldiq: ${prod.stock.toInt()} ta",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = stockColor,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Elegant sticky mobile floating cart summary bar
+                    if (cart.isNotEmpty()) {
+                        val cartCount = cart.sumOf { it.quantity.toInt() }
+                        val cartSum = cart.sumOf { it.quantity * it.product.price }
+                        Surface(
+                            onClick = { showMobileCartSheet = true },
+                            color = PremiumTeal,
+                            contentColor = SlateDarkMain,
+                            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                            shadowElevation = 12.dp,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(56.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.ShoppingCart,
+                                        contentDescription = "Cart Indicator",
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "$cartCount ta tovar",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "• Jami: ${formatUzMoney(cartSum)}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "SAVAT",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 13.sp
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowForward,
+                                        contentDescription = "Go",
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
-            // Right list: ACTIVE CART & CHECKOUT panel
-            Surface(
-                color = SlateDarkSecondary,
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxHeight()
-                    .border(BorderStroke(1.dp, SlateDarkTertiary))
+        // Mobile cart slide-up sheet
+        if (showMobileCartSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showMobileCartSheet = false },
+                containerColor = SlateDarkSecondary,
+                contentColor = Color.White
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(10.dp)
-                ) {
-                    Text(
-                        text = "Sotuv Savati",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp,
-                        color = PremiumTeal,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-
-                    // Cart Items scrolling loop
-                    if (cart.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.AddShoppingCart,
-                                    contentDescription = "Empty",
-                                    tint = MutedSlate,
-                                    modifier = Modifier.size(48.dp)
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Text("Savat hozircha bo'sh", color = MutedSlate, fontSize = 13.sp)
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(cart) { item ->
-                                Surface(
-                                    color = SlateDarkTertiary,
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = item.product.name,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                text = "${formatUzMoney(item.product.price)} × ${item.quantity.toInt()} ta",
-                                                fontSize = 11.sp,
-                                                color = MutedSlate
-                                            )
-                                        }
-                                        
-                                        // Count Adjuster Controls
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            IconButton(
-                                                onClick = { viewModel.updateCartQuantity(item.product, item.quantity - 1) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(Icons.Default.Remove, contentDescription = "Sub", tint = Color.LightGray)
-                                            }
-                                            Text(
-                                                text = item.quantity.toInt().toString(),
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                modifier = Modifier.padding(horizontal = 4.dp)
-                                            )
-                                            IconButton(
-                                                onClick = { viewModel.updateCartQuantity(item.product, item.quantity + 1) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(Icons.Default.Add, contentDescription = "Add", tint = PremiumTeal)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = SlateDarkTertiary, modifier = Modifier.padding(vertical = 8.dp))
-
-                    // CRM Loyalty customer binder integration
-                    CRMIntegrator(
+                Box(modifier = Modifier.fillMaxHeight(0.85f)) {
+                    WeldonCartAndCheckoutPanel(
+                        viewModel = viewModel,
+                        cart = cart,
                         customers = customers,
                         selectedCustomer = selectedCustomer,
                         cashbackToUse = cashbackToUse,
-                        onSelectCustomer = { viewModel.selectCustomer(it) },
-                        onUseCashbackChanged = { viewModel.setCashbackToUse(it) }
+                        paymentType = paymentType,
+                        paidAmountInput = paidAmountInput,
+                        cashierName = activeShift.cashierName,
+                        onCheckoutSuccess = { showMobileCartSheet = false }
                     )
-
-                    Spacer(Modifier.height(6.dp))
-
-                    // Checkout Settings: Payments method options (Cash, Cart, Click/Payme, installment/rassrochka)
-                    PaymentTypeSelector(
-                        selectedType = paymentType,
-                        onSelectType = { viewModel.setPaymentType(it) },
-                        paidInput = paidAmountInput,
-                        onChangePaidInput = { viewModel.setPaidAmountInput(it) },
-                        totalSum = viewModel.getCartTotal() - cashbackToUse
-                    )
-
-                    // Final Total checkout summary price calculations
-                    val subtotal = viewModel.getCartTotal()
-                    val loyaltyDiscount = cashbackToUse
-                    val payable = (subtotal - loyaltyDiscount).coerceAtLeast(0.0)
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Text("To'lanadigan jami summa:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MutedSlate)
-                        Text(formatUzMoney(payable), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = EmeraldCashGreen)
-                    }
-
-                    // Large final confirmation button
-                    Button(
-                        onClick = {
-                            viewModel.checkoutCart(cashierName = activeShift.cashierName)
-                        },
-                        enabled = cart.isNotEmpty(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = EmeraldCashGreen,
-                            disabledContainerColor = SlateDarkTertiary
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("checkout_confirm_button")
-                    ) {
-                        Icon(Icons.Default.Payment, contentDescription = "Checkout")
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "SOTUVNI YAKUNLASH",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 14.sp
-                        )
-                    }
                 }
             }
         }
@@ -1567,7 +1754,8 @@ fun InventoryWorkspace(
     onAddCategoryClick: () -> Unit,
     onTransferClick: () -> Unit,
     onEditProduct: (Product) -> Unit,
-    onDeleteProduct: (Product) -> Unit
+    onDeleteProduct: (Product) -> Unit,
+    isWide: Boolean = false
 ) {
     var query by remember { mutableStateOf("") }
     var subTabSelected by remember { mutableStateOf(0) } // 0: Catalog, 1: Low stock, 2: Internal transfers
@@ -1578,57 +1766,99 @@ fun InventoryWorkspace(
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         // Upper functional buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onAddProductClick,
-                colors = ButtonDefaults.buttonColors(containerColor = PremiumTeal),
-                modifier = Modifier.weight(1f).testTag("add_product_button")
+        if (isWide) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
-                Spacer(Modifier.width(4.dp))
-                Text("Yangi Mahsulot", fontSize = 12.sp)
+                Button(
+                    onClick = onAddProductClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = PremiumTeal),
+                    modifier = Modifier.weight(1f).testTag("add_product_button")
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(Modifier.width(4.dp))
+                    Text("Yangi Mahsulot", fontSize = 12.sp)
+                }
+                Button(
+                    onClick = onAddCategoryClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = SlateDarkTertiary),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Category, contentDescription = "Add category")
+                    Spacer(Modifier.width(4.dp))
+                    Text("+ Toifa", fontSize = 12.sp)
+                }
+                Button(
+                    onClick = onTransferClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningOrange),
+                    modifier = Modifier.weight(1.1f)
+                ) {
+                    Icon(Icons.Default.MoveUp, contentDescription = "Transfer")
+                    Spacer(Modifier.width(4.dp))
+                    Text("Filialga o'tkazish", fontSize = 12.sp)
+                }
             }
-            Button(
-                onClick = onAddCategoryClick,
-                colors = ButtonDefaults.buttonColors(containerColor = SlateDarkTertiary),
-                modifier = Modifier.weight(1f)
+        } else {
+            // Mobile layout structure without overcrowding
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Category, contentDescription = "Add category")
-                Spacer(Modifier.width(4.dp))
-                Text("+ Toifa", fontSize = 12.sp)
-            }
-            Button(
-                onClick = onTransferClick,
-                colors = ButtonDefaults.buttonColors(containerColor = WarningOrange),
-                modifier = Modifier.weight(1.1f)
-            ) {
-                Icon(Icons.Default.MoveUp, contentDescription = "Transfer")
-                Spacer(Modifier.width(4.dp))
-                Text("Filialga o'tkazish", fontSize = 12.sp)
+                Button(
+                    onClick = onAddProductClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = PremiumTeal),
+                    modifier = Modifier.fillMaxWidth().testTag("add_product_button")
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(Modifier.width(6.dp))
+                    Text("Yangi Mahsulot Qo'shish", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onAddCategoryClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSecondary),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Category, contentDescription = "Add category")
+                        Spacer(Modifier.width(4.dp))
+                        Text("+ Toifa", fontSize = 12.sp)
+                    }
+                    Button(
+                        onClick = onTransferClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = WarningOrange),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.MoveUp, contentDescription = "Transfer")
+                        Spacer(Modifier.width(4.dp))
+                        Text("O'tkazmalar", fontSize = 12.sp)
+                    }
+                }
             }
         }
 
         Spacer(Modifier.height(12.dp))
 
-        // Tab selection (Inventory sections)
-        TabRow(
+        // Tab selection (Inventory sections) using ScrollableTabRow to prevent any vertical wrapping!
+        ScrollableTabRow(
             selectedTabIndex = subTabSelected,
+            edgePadding = 0.dp,
             containerColor = Color.Transparent,
             contentColor = PremiumTeal
         ) {
             Tab(selected = subTabSelected == 0, onClick = { subTabSelected = 0 }) {
-                Text("Katalog (${products.size})", modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Katalog (${products.size})", modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
             Tab(selected = subTabSelected == 1, onClick = { subTabSelected = 1 }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Kam Qolgan Tovar (${lowStockProducts.size})", modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
+                val label = if (isWide) "Kam Qolgan Tovar" else "Kam qolgan"
+                Text("$label (${lowStockProducts.size})", modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
             Tab(selected = subTabSelected == 2, onClick = { subTabSelected = 2 }) {
-                Text("Ichki O'tkazmalar (${movements.size})", modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                val label = if (isWide) "Ichki O'tkazmalar" else "Ichki o'tkazma"
+                Text("$label (${movements.size})", modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
 
@@ -2253,4 +2483,175 @@ fun formatUzMoney(amount: Double): String {
     
     // Trim UZS code symbol bugs if they look bad, let's keep it clean
     return raw.replace("UZS", "").trim() + " so'm"
+}
+
+@Composable
+fun WeldonCartAndCheckoutPanel(
+    viewModel: WeldonViewModel,
+    cart: List<CartItem>,
+    customers: List<Customer>,
+    selectedCustomer: Customer?,
+    cashbackToUse: Double,
+    paymentType: String,
+    paidAmountInput: String,
+    cashierName: String,
+    onCheckoutSuccess: () -> Unit = {}
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(10.dp)
+    ) {
+        Text(
+            text = "Sotuv Savati",
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 16.sp,
+            color = PremiumTeal,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        // Cart Items scrolling loop
+        if (cart.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.AddShoppingCart,
+                        contentDescription = "Empty",
+                        tint = MutedSlate,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("Savat hozircha bo'sh", color = MutedSlate, fontSize = 13.sp)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(cart) { item ->
+                    Surface(
+                        color = SlateDarkTertiary,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = item.product.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${formatUzMoney(item.product.price)} × ${item.quantity.toInt()} ta",
+                                    fontSize = 11.sp,
+                                    color = MutedSlate
+                                )
+                            }
+                            
+                            // Count Adjuster Controls
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                IconButton(
+                                    onClick = { viewModel.updateCartQuantity(item.product, item.quantity - 1) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Sub", tint = Color.LightGray)
+                                }
+                                Text(
+                                    text = item.quantity.toInt().toString(),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                IconButton(
+                                    onClick = { viewModel.updateCartQuantity(item.product, item.quantity + 1) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add", tint = PremiumTeal)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(color = SlateDarkTertiary, modifier = Modifier.padding(vertical = 8.dp))
+
+        // CRM Loyalty customer binder integration
+        CRMIntegrator(
+            customers = customers,
+            selectedCustomer = selectedCustomer,
+            cashbackToUse = cashbackToUse,
+            onSelectCustomer = { viewModel.selectCustomer(it) },
+            onUseCashbackChanged = { viewModel.setCashbackToUse(it) }
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        // Checkout Settings: Payments method options (Cash, Cart, Click/Payme, installment/rassrochka)
+        PaymentTypeSelector(
+            selectedType = paymentType,
+            onSelectType = { viewModel.setPaymentType(it) },
+            paidInput = paidAmountInput,
+            onChangePaidInput = { viewModel.setPaidAmountInput(it) },
+            totalSum = viewModel.getCartTotal() - cashbackToUse
+        )
+
+        // Final Total checkout summary price calculations
+        val subtotal = viewModel.getCartTotal()
+        val loyaltyDiscount = cashbackToUse
+        val payable = (subtotal - loyaltyDiscount).coerceAtLeast(0.0)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text("To'lanadigan jami summa:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MutedSlate)
+            Text(formatUzMoney(payable), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = EmeraldCashGreen)
+        }
+
+        // Large final confirmation button
+        Button(
+            onClick = {
+                viewModel.checkoutCart(cashierName = cashierName)
+                onCheckoutSuccess()
+            },
+            enabled = cart.isNotEmpty(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = EmeraldCashGreen,
+                disabledContainerColor = SlateDarkTertiary
+            ),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .testTag("checkout_confirm_button")
+        ) {
+            Icon(Icons.Default.Payment, contentDescription = "Checkout")
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "SOTUVNI YAKUNLASH",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 14.sp
+            )
+        }
+    }
 }
